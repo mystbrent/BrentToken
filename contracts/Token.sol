@@ -19,6 +19,7 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
     uint256 _granularity;
 
     mapping (address => uint256) private balances;
+    mapping (address => mapping(address => uint256)) private allowed;
     
     address[] private _defaultOperators;
     mapping(address => bool) _isDefaultOperator;
@@ -72,10 +73,48 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
         ******************* ERC 20 ********************
     **/
 
-    function transfer(address to, uint256 value)
-    
-    external returns (bool) {
+    function transfer(
+        address to,
+        uint256 value
+    ) external returns (bool) {
+        _send(msg.sender, msg.sender, to, value, "", "", false);
+        emit Transfer(msg.sender, to, value);
+    }
 
+    function approve(
+        address spender,
+        uint256 value
+    ) validRecipient(spender) hasEnoughBalance(value) external returns (bool) {
+        allowed[msg.sender][spender] = allowed[msg.sender][spender].add(value);
+        emit Approval(msg.sender, spender, value);
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) external returns (bool) {
+        require(allowed[from][msg.sender] >= value, "Approved amount is insufficient.");
+
+        allowed[from][msg.sender] = allowed[from][msg.sender].sub(value);
+        _send(msg.sender, from, to, value, "", "", false);
+
+        emit Transfer(from, to, value);
+    }
+
+    function totalSupply() external view returns (uint256) {
+        return _totalSupply;
+    }
+
+    function balanceOf(address who) external view returns (uint256) {
+        return balances[who];
+    }
+
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256) {
+        return allowed[owner][spender];
     }
 
     /**
