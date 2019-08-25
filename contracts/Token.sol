@@ -5,11 +5,12 @@ import { IERC777Token } from "./iERC777Token.sol";
 import { IERC777TokensSender } from "./iERC777TokensSender.sol";
 import { IERC777TokensRecipient } from "./iERC777TokensRecipient.sol";
 import { ERC1820Registry } from "./ERC1820.sol";
+import { Owned } from "./Owned.sol"
 import { CommonConstants } from "./Common.sol";
 import { SafeMath } from "./SafeMath.sol";
 import { Address } from "./Address.sol";
 
-contract Token is IERC20Token, IERC777Token, CommonConstants {
+contract Token is IERC20Token, IERC777Token, Owned, CommonConstants {
     using SafeMath for uint256;
     using Address for address;
 
@@ -115,6 +116,75 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
         address spender
     ) external view returns (uint256) {
         return allowed[owner][spender];
+    }
+
+    /**
+        ******************* ERC 777 ********************
+    **/
+
+    function name() external view returns (string memory) {
+        return _name;
+    }
+
+    function symbol() external view returns (string memory) {
+        return _symbol;
+    }
+
+    function granularity() external view returns (uint256) {
+        return _granularity;
+    }
+
+    function defaultOperators() external view returns (address[] memory) {
+        return _defaultOperators;
+    }
+
+    function isOperatorFor(
+        address operator,
+        address holder
+    ) external view returns (bool) {
+        return _authorizedOperators[holder][operator];
+    }
+
+    function authorizeOperator(address operator) onlyOwner external {
+        require(_authorizedOperators[msg.sender][operator] == false, "Address is already an operator.");
+        _authorizedOperators[msg.sender][operator] = true;
+
+        emit AuthorizedOperator(operator, msg.sender);
+    }
+    function revokeOperator(address operator) external {
+        require(_authorizedOperators[msg.sender][operator] == true, "Address is not an operator.");
+        _authorizedOperators[msg.sender][operator] = false;
+
+        emit RevokedOperator(operator, msg.sender);
+    }
+
+    function send(address to, uint256 amount, bytes calldata data) external {
+        _send(msg.sender, msg.sender, to, amount, data, "", false);
+    }
+
+    function operatorSend(
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    ) external {
+        require(_authorizedOperators[from][msg.sender] == true, "Sender is not an operator.");
+        _send(msg.sender, from, to, amount, data, operatorData, false);
+    }
+
+    function burn(uint256 amount, bytes calldata data) external {
+        _burn(msg.sender, msg.sender, amount, data, "");
+    }
+
+    function operatorBurn(
+        address from,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    ) external {
+        require(_authorizedOperators[from][msg.sender] == true, "Sender is not an operator.");
+        _burn(msg.sender, from, amount, data, operatorData);
     }
 
     /**
