@@ -30,6 +30,8 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
     address[] public burners;
     mapping(address => bool) _isBurner;
 
+    bytes32 constant private TOKEN_SENDER_HASH = 0x29ddb589b1fb5fc7cf394961c1adf5f8c6454761adf795e67fe149f658abe895;
+    bytes32 constant private TOKEN_RECIPIENT_HASH = 0xb281fc8c12954d22544db45de3159a39272895b169a852b314f9cc762e44c53b;
     // ERC1820Registry _erc1820 = ERC1820Registry(ERC1820_REGISTRY_ADDRESS);
     ERC1820Registry _erc1820 = ERC1820Registry(0xc4597A8611bD9013E770590AB795B9E6bDe99057);
 
@@ -64,5 +66,95 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
 
       _erc1820.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
       _erc1820.setInterfaceImplementer(address(this), keccak256("ERC20Token"), address(this));
+    }
+
+    /**
+        ******************* ERC 20 ********************
+    **/
+
+    function transfer(address to, uint256 value)
+    
+    external returns (bool) {
+
+    }
+
+    /**
+        ******************* Additional Functions ********************
+    **/
+
+    /**
+        1. Check
+        2. Effects
+        3. Send
+     */
+    function _send(
+        address _operator,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data,
+        bytes memory _operatorData,
+        bool _enforce
+    ) validSender validRecipient(_to) hasEnoughBalance(_amount) private returns (bool) {
+
+    }
+
+    /**
+        ******************* Hooks ********************
+    **/
+
+    function _callTokensToSend(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData
+    )
+        private
+    {
+        address implementer = _erc1820.getInterfaceImplementer(from, TOKEN_SENDER_HASH);
+        if (implementer != address(0)) {
+            IERC777TokensSender(implementer).tokensToSend(operator, from, to, amount, userData, operatorData);
+        }
+    }
+    
+    function _callTokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes memory userData,
+        bytes memory operatorData,
+        bool enforce
+    )
+        private
+    {
+        address implementer = _erc1820.getInterfaceImplementer(to, TOKEN_RECIPIENT_HASH);
+        if (implementer != address(0)) {
+            IERC777TokensRecipient(implementer).tokensReceived(operator, from, to, amount, userData, operatorData);
+        } else if (enforce) {
+            require(!to.isContract(), "Recipient is a contract that does not implement ERC777TokensRecipient");
+        }
+    }
+
+
+    /**
+        ******************* Validators ********************
+    **/
+
+    modifier hasEnoughBalance(uint256 _amount) {
+        require(balances[msg.sender] >= _amount, "Sender has insufficient balance.");
+        _;
+    }
+
+    modifier validSender() {
+        require(msg.sender != address(0x0), "Invalid sender.");
+        _;
+    }
+
+    modifier validRecipient(address _recipient) {
+        require(_recipient != address(0x0), "Invalid Recipient.");
+        _;
     }
 }
