@@ -1,6 +1,6 @@
 pragma solidity ^0.5.3;
 
-interface ERC777TokensRecipient {
+interface IERC777TokensRecipient {
     function tokensReceived(
         address operator,
         address from,

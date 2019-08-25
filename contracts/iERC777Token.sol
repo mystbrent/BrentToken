@@ -1,6 +1,6 @@
 pragma solidity ^0.5.3;
 
-interface ERC777Token {
+interface IERC777Token {
     function name() external view returns (string memory);
     function symbol() external view returns (string memory);
     function totalSupply() external view returns (uint256);
