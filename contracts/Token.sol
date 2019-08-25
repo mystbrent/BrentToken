@@ -26,9 +26,9 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
     mapping(address => mapping(address => bool)) internal _revokedOperators;
 
     address[] public minters;
-    mapping(address => bool) _isMinter;
+    mapping(address => bool) private _isMinter;
     address[] public burners;
-    mapping(address => bool) _isBurner;
+    mapping(address => bool) private _isBurner;
 
     bytes32 constant private TOKEN_SENDER_HASH = 0x29ddb589b1fb5fc7cf394961c1adf5f8c6454761adf795e67fe149f658abe895;
     bytes32 constant private TOKEN_RECIPIENT_HASH = 0xb281fc8c12954d22544db45de3159a39272895b169a852b314f9cc762e44c53b;
@@ -95,8 +95,49 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
         bytes memory _data,
         bytes memory _operatorData,
         bool _enforce
-    ) validSender validRecipient(_to) hasEnoughBalance(_amount) private returns (bool) {
+    ) validRecipient(_to) hasEnoughBalance(_amount) private returns (bool) {
 
+        _callTokensToSend(_operator, _from, _to, _amount, _data, _operatorData);
+
+        balances[_from] = balances[_from].sub(_amount);
+        balances[_to] = balances[_to].add(_amount);
+
+        _callTokensReceived(_operator, _from, _to, _amount, _data, _operatorData, _enforce);
+
+        emit Sent(_operator, _from, _to, _amount, _data, _operatorData);
+    }
+
+    function _burn(
+        address _operator,
+        address _from,
+        uint256 _amount,
+        bytes memory _data,
+        bytes memory _operatorData
+    ) validRecipient(_from) hasEnoughBalance(_amount) private returns (bool) {
+
+        _callTokensToSend(_operator, _from, address(0x0), _amount, _data, _operatorData);
+
+        balances[_from] = balances[_from].sub(_amount);
+        _totalSupply = _totalSupply.sub(_amount);
+
+        emit Burned(_operator, _from, _amount, _data, _operatorData);
+    }
+
+    function mint(
+        address _to,
+        uint256 _amount,
+        bytes calldata _data,
+        bytes calldata _operatorData
+    ) isMinter external returns (bool) {
+
+        require(_to != address(0x0), "Receiver is not a valid address.");
+
+        _callTokensReceived(address(0x0), msg.sender, _to, _amount, _data, _operatorData, false);
+
+        balances[_to] = balances[_to].add(_amount);
+        _totalSupply = _totalSupply.add(_amount);
+
+        emit Minted(msg.sender, _to, _amount, _data, _operatorData);
     }
 
     /**
@@ -148,13 +189,18 @@ contract Token is IERC20Token, IERC777Token, CommonConstants {
         _;
     }
 
-    modifier validSender() {
-        require(msg.sender != address(0x0), "Invalid sender.");
+    modifier validRecipient(address _recipient) {
+        require(_recipient != address(0x0), "Invalid Recipient.");
         _;
     }
 
-    modifier validRecipient(address _recipient) {
-        require(_recipient != address(0x0), "Invalid Recipient.");
+    modifier isMinter() {
+        require(_isMinter[msg.sender] == true, "Sender is not a minter.");
+        _;
+    }
+
+    modifier isBurner() {
+        require(_isBurner[msg.sender] == true, "Sender is not a burner.");
         _;
     }
 }
