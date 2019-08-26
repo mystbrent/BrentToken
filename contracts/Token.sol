@@ -5,12 +5,11 @@ import { IERC777Token } from "./iERC777Token.sol";
 import { IERC777TokensSender } from "./iERC777TokensSender.sol";
 import { IERC777TokensRecipient } from "./iERC777TokensRecipient.sol";
 import { ERC1820Registry } from "./ERC1820.sol";
-import { Owned } from "./Owned.sol"
-import { CommonConstants } from "./Common.sol";
+import { Owned } from "./Owned.sol";
 import { SafeMath } from "./SafeMath.sol";
 import { Address } from "./Address.sol";
 
-contract Token is IERC20Token, IERC777Token, Owned, CommonConstants {
+contract Token is IERC20Token, IERC777Token, Owned {
     using SafeMath for uint256;
     using Address for address;
 
@@ -145,7 +144,7 @@ contract Token is IERC20Token, IERC777Token, Owned, CommonConstants {
         return _authorizedOperators[holder][operator];
     }
 
-    function authorizeOperator(address operator) onlyOwner external {
+    function authorizeOperator(address operator) external {
         require(_authorizedOperators[msg.sender][operator] == false, "Address is already an operator.");
         _authorizedOperators[msg.sender][operator] = true;
 
@@ -222,7 +221,7 @@ contract Token is IERC20Token, IERC777Token, Owned, CommonConstants {
         uint256 _amount,
         bytes memory _data,
         bytes memory _operatorData
-    ) validRecipient(_from) hasEnoughBalance(_amount) private returns (bool) {
+    ) isBurner validRecipient(_from) hasEnoughBalance(_amount) private returns (bool) {
 
         _callTokensToSend(_operator, _from, address(0x0), _amount, _data, _operatorData);
 
@@ -247,6 +246,28 @@ contract Token is IERC20Token, IERC777Token, Owned, CommonConstants {
         _totalSupply = _totalSupply.add(_amount);
 
         emit Minted(msg.sender, _to, _amount, _data, _operatorData);
+    }
+
+    /**
+        ******************* Mint Functions ********************
+    **/
+
+    function addMinter(address _minter) external returns (bool) {
+        require(_isMinter[_minter] == false, "Address is already a minter.");
+
+        minters.push(_minter);
+        _isMinter[_minter] = true;
+    }
+
+    /**
+        ******************* Burn Functions ********************
+    **/
+
+    function addBurner(address _burner) external returns (bool) {
+        require(_isBurner[_burner] == false, "Address is already a burner.");
+
+        burners.push(_burner);
+        _isBurner[_burner] = true;
     }
 
     /**
