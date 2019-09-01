@@ -1,5 +1,5 @@
 const Token = artifacts.require("Token");
 
 module.exports = function(deployer) {
-  deployer.deploy(Token, "BrentCoin", "BC", 0, 2, [], [], []);
+  deployer.deploy(Token, "X Token", "XT", 0, 2, [], [], []);
 };

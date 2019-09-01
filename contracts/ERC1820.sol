@@ -1,3 +1,7 @@
+/**
+ *Submitted for verification at Etherscan.io on 2019-04-03
+*/
+
 /* ERC1820 Pseudo-introspection Registry Contract
  * This standard defines a universal registry smart contract where any address (contract or regular account) can
  * register which interface it supports and which smart contract is responsible for its implementation.
@@ -25,7 +29,7 @@
  *    ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝
  *
  */
-pragma solidity ^0.5.3;
+pragma solidity 0.5.3;
 // IV is value needed to have a vanity address starting with '0x1820'.
 // IV: 53759
 
